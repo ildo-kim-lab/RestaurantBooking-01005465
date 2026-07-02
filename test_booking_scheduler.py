@@ -3,18 +3,48 @@ import pytest
 from schedule import Customer, Schedule
 from communication import SmsSender, MailSender
 from booking_scheduler import BookingScheduler
+from datetime import datetime, timedelta
 
-def test_예약은_정시에만_가능하다_정시가_아닌경우_예약불가():
-    pass
+NOT_ON_THE_HOUR = datetime.strptime("2021/03/26 09:05", "%Y/%m/%d %H:%M")
+ON_THE_HOUR = datetime.strptime("2021/03/26 09:00", "%Y/%m/%d %H:%M")
+CUSTOMER = Customer("Fake name", "010-1234-5678")
+UNDER_CAPACITY = 1
+CAPACITY_PER_HOUR = 3
 
-def test_예약은_정시에만_가능하다_정시인_경우_예약가능():
-    pass
+@pytest.fixture
+def booking_scheduler() -> BookingScheduler:
+    booking_scheduler = BookingScheduler(CAPACITY_PER_HOUR)
+    return booking_scheduler
 
-def test_시간대별_인원제한이_있다_같은_시간대에_Capacity_초과할_경우_예외발생():
-    pass
 
-def test_시간대별_인원제한이_있다_같은_시간대가_다르면_Capacity_차있어도_스케쥴_추가_성공():
-    pass
+def test_예약은_정시에만_가능하다_정시가_아닌경우_예약불가(booking_scheduler):
+    schedule = Schedule(NOT_ON_THE_HOUR, UNDER_CAPACITY, CUSTOMER)
+    with pytest.raises(ValueError):
+        booking_scheduler.add_schedule(schedule)
+
+
+def test_예약은_정시에만_가능하다_정시인_경우_예약가능(booking_scheduler):
+    schedule = Schedule(ON_THE_HOUR , UNDER_CAPACITY , CUSTOMER)
+    booking_scheduler.add_schedule(schedule)
+    assert booking_scheduler.has_schedule(schedule)
+
+def test_시간대별_인원제한이_있다_같은_시간대에_Capacity_초과할_경우_예외발생(booking_scheduler):
+    schedule = Schedule(ON_THE_HOUR, CAPACITY_PER_HOUR, CUSTOMER)
+    booking_scheduler.add_schedule(schedule)
+    with pytest.raises( ValueError, match = "Number of people is over restaurant capacity per"):
+        new_schedule = Schedule(ON_THE_HOUR, UNDER_CAPACITY, CUSTOMER)
+        booking_scheduler.add_schedule(new_schedule)
+
+def test_시간대별_인원제한이_있다_같은_시간대가_다르면_Capacity_차있어도_스케쥴_추가_성공(booking_scheduler):
+    schedule = Schedule(ON_THE_HOUR, CAPACITY_PER_HOUR, CUSTOMER)
+    booking_scheduler.add_schedule(schedule)
+
+    different_hour = ON_THE_HOUR + timedelta(hours = 1)
+    new_schedule = Schedule(different_hour , UNDER_CAPACITY , CUSTOMER)
+    booking_scheduler.add_schedule(new_schedule)
+
+    assert booking_scheduler.has_schedule(schedule)
+    assert booking_scheduler.has_schedule(new_schedule)
 
 def test_예약완료시_SMS는_무조건_발송():
     pass
