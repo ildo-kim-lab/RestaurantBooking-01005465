@@ -24,3 +24,5 @@ class TestableMailSender(MailSender):
     @property
     def send_mail_count(self) -> int:
         return self._send_mail_count
+
+# class TestableScheduler()
